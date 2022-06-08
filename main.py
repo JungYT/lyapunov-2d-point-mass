@@ -26,7 +26,7 @@ def train():
     return checkpoint_paths
 
 
-@ray.remote(num_cpus=6)
+@ray.remote(num_cpus=5)
 def sim(initial, checkpoint_path, env_config, num=0):
     env = Env(env_config)
     agent = ppo.PPOTrainer(env=Env, config={"explore": False})
@@ -92,7 +92,7 @@ def config():
             "num_gpus": 0,
             "num_workers": 4,
             # "num_envs_per_worker": 50,
-            "lr": 0.0001,
+            "lr": 0.001,
             "gamma": 0.9,
             # "lr": tune.grid_search([0.001, 0.0005, 0.0001]),
             # "gamma": tune.grid_search([0.9, 0.99, 0.999])
@@ -124,20 +124,21 @@ def main():
     checkpoint_logger.set_info(checkpoint_paths=checkpoint_paths)
     checkpoint_logger.set_info(config=fym.config.load(as_dict=True))
     checkpoint_logger.close()
+    breakpoint()
     return parent_path
 
-# def debug():
-#     config()
-#     cfg = fym.config.load(as_dict=True)
-#     env = Env(cfg['config']['env_config'])
+def debug():
+    config()
+    cfg = fym.config.load(as_dict=True)
+    env = Env(cfg['config']['env_config'])
     
-#     obs = env.reset()
-#     while True:
-#         action = np.array([0.3, 0.1, 0.1, 0.1])
-#         obs, reward, done, info = env.step(action)
-#         if done:
-#             break
-#     env.close()
+    obs = env.reset()
+    while True:
+        action = np.array([0.3, 0.1])
+        obs, reward, done, info = env.step(action)
+        if done:
+            break
+    env.close()
 
 # def plot_debug(parent_path):
 #     _, info = fym.logging.load(
@@ -160,7 +161,7 @@ if __name__ == "__main__":
     ## To train, validate, and make figure
     parent_path = main()
     ## To validate and make figure
-    # parent_path = './ray_results/PPO_2022-01-20_15-26-21'
+    # parent_path = './ray_results/PPO_2022-02-14_13-57-59'
     ## plot debugging
     # plot_debug(parent_path)
 

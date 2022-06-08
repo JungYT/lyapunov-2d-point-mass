@@ -72,8 +72,8 @@ class Env(BaseEnv, gym.Env):
         x = np.float32(self.plant.state)
         pos = x[0:2]
         vel = x[2:4]
-        lyap_dot = pos.squeeze() @ vel.squeeze()
-        return dict(t=t, **self.observe_dict(), action=u, lyap_dot=lyap_dot)
+        lyap = pos.squeeze() @ pos.squeeze()
+        return dict(t=t, **self.observe_dict(), action=u, lyap=lyap)
 
     def observe(self):
         obs = np.float32(self.plant.state)
@@ -83,8 +83,10 @@ class Env(BaseEnv, gym.Env):
         # reward = self.L2norm()
         # reward = self.quadratic(u)
         # reward = self.exponential_quadratic()
-        reward = self.lyapunov(pre_obs, next_obs)
+        # reward = self.lyapunov(pre_obs, next_obs)
         # reward = self.exponential_lyapunov()
+        # reward  = self.stable_lyapunov(pre_obs, next_obs)
+        reward  = self.zero_at_zero_lyapunov(pre_obs, next_obs, u)
 
         return reward
 
@@ -153,6 +155,34 @@ class Env(BaseEnv, gym.Env):
         reward += tmp
         return reward
 
+    def stable_lyapunov(self, pre_obs, next_obs):
+        lyap = next_obs[0:2].squeeze() @ next_obs[0:2].squeeze()
+        del_lyap = next_obs[0:2].squeeze() @ next_obs[0:2].squeeze() \
+            - pre_obs[0:2].squeeze() @ pre_obs[0:2].squeeze()
+        
+        if (del_lyap<=-1e-7 and lyap>1e-6) or (del_lyap<=0  and lyap<=1e-6):
+            reward = 0
+        else:
+            reward = -10
+        return reward
 
+    def zero_at_zero_lyapunov(self, pre_obs, next_obs, u):
+        next = next_obs.squeeze()
+        pre = pre_obs.squeeze()
+        P = np.diag([1, 1, 0, 0])
+        lyap = next_obs.squeeze() @ P @ next_obs.squeeze()
+        del_lyap = next @ P @ next - pre @ P @ pre
+        exp = np.float32(np.exp(
+            (
+                -next @ np.diag([1, 1, 0, 0]) @ next
+                -u.squeeze() @ np.diag([0, 0]) @ u.squeeze()
+            ).item()
+        ))
+        
+        if (del_lyap<=-1e-7 and lyap>1e-6) or (del_lyap<=0  and lyap<=1e-6):
+            reward = -1 + exp
+        else:
+            reward = -10 + exp
+        return reward
 
 
